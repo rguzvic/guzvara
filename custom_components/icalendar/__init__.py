@@ -7,6 +7,7 @@ from http import HTTPStatus
 
 from aiohttp import web
 import datetime
+import hashlib
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
@@ -127,7 +128,10 @@ class iCalendarView(HomeAssistantView):
                     e["end"], "%Y-%m-%d"
                 ).strftime("%Y%m%d")
                 dtstamp = f'{start}T000000'
+
+            # Create and hash the UID
             uid = f"{entity_id}-{start}"
+            uid = hashlib.sha256(uid.encode('utf-8')).hexdigest()
 
             response += "BEGIN:VEVENT\n"
 
