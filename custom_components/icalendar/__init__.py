@@ -140,21 +140,21 @@ class iCalendarView(HomeAssistantView):
                 "summary" in e
                 and e["summary"] is not None
             ):
-                response += f"SUMMARY:{escape(e['summary'])}\n"
+                response += f"SUMMARY:{escape(e['summary']).replace('\n', '\n ').rstrip()}\n"
 
             if (
                 "description" in e
                 and e["description"] is not None
             ):
                 response += (
-                    f"DESCRIPTION:{escape(e['description'])}\n"
+                    f"DESCRIPTION:{escape(e['description']).replace('\n', '\n ').rstrip()}\n"
                 )
 
             if (
                 "location" in e
                 and e["location"] is not None
             ):
-                response += f"LOCATION:{escape(e['location'])}\n"
+                response += f"LOCATION:{escape(e['location']).replace('\n', '\n ').rstrip()}\n"
 
             # Finish up this calendar entry
             response += "END:VEVENT\n"
