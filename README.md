@@ -30,7 +30,7 @@ In your preferred calendar application, input your iCalendar URL in the followin
 - http://*homeassistant.local:8123*/api/ics/calendar.*holidays*?s=*yourSuperSecret*
 
 ## Known issues
-- Only supplies the first upcoming event.
+- UID are sometimes not unique.
 
 ## Future enhancements
 Your support is welcomed.
