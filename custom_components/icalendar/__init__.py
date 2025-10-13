@@ -104,6 +104,7 @@ class iCalendarView(HomeAssistantView):
         response += "CALSCALE:GREGORIAN\n"
         response += "METHOD:PUBLISH\n"
         response += f"ORGANIZER;CN=\"{escape(self._state.attributes['friendly_name'])}\":MAILTO:{entity_id}@homeassistant.local\n"
+        response += f"NAME:{escape(self._state.attributes['friendly_name'])}\n"
 
         # Generate the variables
         entity_id = escape(entity_id)
