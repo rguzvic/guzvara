@@ -80,15 +80,22 @@ class iCalendarView(HomeAssistantView):
             _LOGGER.error("Entity '%s' could not be found", entity_id)
             return web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
 
-        # Generate the variables
-        entity_id = escape(entity_id)
-        start = datetime.datetime.strptime(
-            self._state.attributes["start_time"], "%Y-%m-%d %H:%M:%S"
-        ).strftime("%Y%m%dT%H%M%S")
-        end = datetime.datetime.strptime(
-            self._state.attributes["end_time"], "%Y-%m-%d %H:%M:%S"
-        ).strftime("%Y%m%dT%H%M%S")
-        uid = f"{entity_id}-{start}"
+        # Calculate the start and end timeframe for our calendar
+        # We output 4 weeks history and 52 weeks into the future
+        start = (datetime.datetime.now() - datetime.timedelta(weeks=4)).strftime("%Y-%m-%d %H:%M:%S")
+        end = (datetime.datetime.now() + datetime.timedelta(weeks=52)).strftime("%Y-%m-%d %H:%M:%S")
+
+        events = await self.hass.services.async_call('calendar', 'get_events',
+              { "entity_id": entity_id,
+                "start_date_time": start,
+                "end_date_time": end
+              }, blocking=True, return_response=True)
+
+        if(events is None) or (entity_id not in events):
+            _LOGGER.error("Entity '%s' has no events", entity_id)
+            return web.Response(body="404: Not Found", status=HTTPStatus.NOT_FOUND)
+
+        events = events[entity_id]['events']
 
         # Craft the iCalendar response
         response = "BEGIN:VCALENDAR\n"
@@ -98,37 +105,61 @@ class iCalendarView(HomeAssistantView):
         response += "METHOD:PUBLISH\n"
         response += f"ORGANIZER;CN=\"{escape(self._state.attributes['friendly_name'])}\":MAILTO:{entity_id}@homeassistant.local\n"
 
-        response += "BEGIN:VEVENT\n"
+        # Generate the variables
+        entity_id = escape(entity_id)
 
-        response += f"UID:{uid}\n"
-        response += f"DTSTAMP:{start}\n"
-        response += f"DTSTART:{start}\n"
-        response += f"DTEND:{end}\n"
+        # Iterate through all the events
+        for e in events:
+            try:
+                start = datetime.datetime.strptime(
+                    e["start"], "%Y-%m-%dT%H:%M:%S%z"
+                ).strftime("%Y%m%dT%H%M%S")
+                end = datetime.datetime.strptime(
+                    e["end"], "%Y-%m-%dT%H:%M:%S%z"
+                ).strftime("%Y%m%dT%H%M%S")
+                dtstamp = start
+            except:
+                start = datetime.datetime.strptime(
+                    e["start"], "%Y-%m-%d"
+                ).strftime("%Y%m%d")
+                end = datetime.datetime.strptime(
+                    e["end"], "%Y-%m-%d"
+                ).strftime("%Y%m%d")
+                dtstamp = f'{start}T000000'
+            uid = f"{entity_id}-{start}"
 
-        # Add available optional attribuets to the iCalendar response
-        if self._state.attributes:
+            response += "BEGIN:VEVENT\n"
+
+            response += f"UID:{uid}\n"
+            response += f"DTSTAMP:{dtstamp}\n"
+            response += f"DTSTART:{start}\n"
+            response += f"DTEND:{end}\n"
+
+            # Add available optional attribuets to the iCalendar response
             if (
-                "message" in self._state.attributes
-                and self._state.attributes["message"] is not None
+                "summary" in e
+                and e["summary"] is not None
             ):
-                response += f"SUMMARY:{escape(self._state.attributes['message'])}\n"
+                response += f"SUMMARY:{escape(e['summary'])}\n"
 
             if (
-                "description" in self._state.attributes
-                and self._state.attributes["description"] is not None
+                "description" in e
+                and e["description"] is not None
             ):
                 response += (
-                    f"DESCRIPTION:{escape(self._state.attributes['description'])}\n"
+                    f"DESCRIPTION:{escape(e['description'])}\n"
                 )
 
             if (
-                "location" in self._state.attributes
-                and self._state.attributes["location"] is not None
+                "location" in e
+                and e["location"] is not None
             ):
-                response += f"LOCATION:{escape(self._state.attributes['location'])}\n"
+                response += f"LOCATION:{escape(e['location'])}\n"
+
+            # Finish up this calendar entry
+            response += "END:VEVENT\n"
 
         # Finish up the iCalendar response
-        response += "END:VEVENT\n"
         response += "END:VCALENDAR"
 
         # Return the iCalendar response
