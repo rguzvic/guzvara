@@ -130,7 +130,12 @@ class iCalendarView(HomeAssistantView):
                 dtstamp = f'{start}T000000'
 
             # Create and hash the UID
-            uid = f"{entity_id}-{start}"
+            if ("summary" in e and e["summary"] is not None):
+                summary = escape(e['summary'])
+            else:
+                summary = None
+
+            uid = f"{entity_id}-{start}-{end}-{summary}"
             uid = hashlib.sha256(uid.encode('utf-8')).hexdigest()
 
             response += "BEGIN:VEVENT\n"
@@ -141,11 +146,8 @@ class iCalendarView(HomeAssistantView):
             response += f"DTEND:{end}\n"
 
             # Add available optional attribuets to the iCalendar response
-            if (
-                "summary" in e
-                and e["summary"] is not None
-            ):
-                response += f"SUMMARY:{escape(e['summary']).replace('\n', '\n ').rstrip()}\n"
+            if summary is not None:
+                response += f"SUMMARY:{summary.replace('\n', '\n ').rstrip()}\n"
 
             if (
                 "description" in e
