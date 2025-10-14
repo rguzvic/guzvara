@@ -29,6 +29,20 @@ In your preferred calendar application, input your iCalendar URL in the followin
 
 - http://*homeassistant.local:8123*/api/ics/calendar.*holidays*?s=*yourSuperSecret*
 
+## Additional configuration
+
+You can add colours to specific named events by adding the colours section to your config.  For example:
+
+```
+icalendar:
+  secret: yourSuperSecret
+  colours:
+    - name: "Recycling"
+      colour: green
+    - name: "Important Event"
+      colour: red
+```
+
 ## Known issues
 None.
 
