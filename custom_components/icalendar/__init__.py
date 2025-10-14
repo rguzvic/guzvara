@@ -2,6 +2,7 @@
 
 import logging
 
+from typing import Optional
 from html import escape
 from http import HTTPStatus
 
@@ -11,10 +12,6 @@ import hashlib
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
-from homeassistant.const import (
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
-)
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, CONTENT_TYPE_ICAL
@@ -25,14 +22,19 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the iCalendar component."""
+    colours = None
+
     for name, value in config[DOMAIN].items():
+        if name == "colours":
+            colours = value
         # Find the secret from the config file
         if name == "secret":
             secret = str(value)
 
-            # Register the iCalendar HTTP view
-            hass.http.register_view(iCalendarView(hass, secret))
-            return True
+    # Register the iCalendar HTTP view
+    if secret is not None:
+        hass.http.register_view(iCalendarView(hass, secret, colours))
+        return True
 
     return False
 
@@ -43,10 +45,11 @@ class iCalendarView(HomeAssistantView):
     name = f"{DOMAIN}"
     url = "/api/ics/{entity_id}"
 
-    def __init__(self, hass: HomeAssistant, secret: str) -> None:
+    def __init__(self, hass: HomeAssistant, secret: str, colours: Optional[dict]) -> None:
         """Initialize the iCalendar view."""
         self.hass = hass
         self.secret = secret
+        self.colours = colours
         self.requires_auth = False
 
     async def get(self, request: web.Request, entity_id: str) -> web.Response:
@@ -54,32 +57,27 @@ class iCalendarView(HomeAssistantView):
         # Forbid empty secrets
         if request.query.get("s") is None:
             _LOGGER.error("Request was sent for entity '%s' without secret", entity_id)
-            return web.Response(status=HTTPStatus.FORBIDDEN)
+            return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
 
         # Only return anything with the secret supplied
         if str(request.query.get("s")) != str(self.secret):
             _LOGGER.error(
                 "Request was sent for entity '%s' with invalid secret", entity_id
             )
-            return web.Response(status=HTTPStatus.UNAUTHORIZED)
+            return web.Response(
+                body="401: Unauthorized", status=HTTPStatus.UNAUTHORIZED
+            )
 
         # Only return calendars
         if not entity_id.startswith("calendar."):
             _LOGGER.error("Entity '%s' is not a calendar", entity_id)
-            return web.Response(status=HTTPStatus.FORBIDDEN)
-
-        # Get the calendar entity state
-        self._state = self.hass.states.get(entity_id)
+            return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
 
         # Check if the calendar entity exists
+        self._state = self.hass.states.get(entity_id)
         if self._state is None:
             _LOGGER.error("Entity '%s' could not be found", entity_id)
-            return web.Response(status=HTTPStatus.NOT_FOUND)
-
-        # Check if the calendar entity is available
-        if self._state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-            _LOGGER.error("Entity '%s' could not be found", entity_id)
-            return web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
+            return web.Response(body="404: Not Found", status=HTTPStatus.NOT_FOUND)
 
         # Calculate the start and end timeframe for our calendar
         # We output 4 weeks history and 52 weeks into the future
@@ -128,7 +126,7 @@ class iCalendarView(HomeAssistantView):
                     e["end"], "%Y-%m-%d"
                 ).strftime("%Y%m%d")
                 dtstamp = f'{start}T000000'
-
+                
             # Create and hash the UID
             if ("summary" in e and e["summary"] is not None):
                 summary = escape(e['summary'])
@@ -145,7 +143,7 @@ class iCalendarView(HomeAssistantView):
             response += f"DTSTART:{start}\n"
             response += f"DTEND:{end}\n"
 
-            # Add available optional attribuets to the iCalendar response
+            # Add available optional attributes to the iCalendar response
             if summary is not None:
                 response += f"SUMMARY:{summary.replace('\n', '\n ').rstrip()}\n"
 
@@ -162,6 +160,10 @@ class iCalendarView(HomeAssistantView):
                 and e["location"] is not None
             ):
                 response += f"LOCATION:{escape(e['location']).replace('\n', '\n ').rstrip()}\n"
+
+            for c in self.colours:
+                if c['name'] == summary:
+                    response += f"COLOR:{c['colour']}\n"
 
             # Finish up this calendar entry
             response += "END:VEVENT\n"
