@@ -56,7 +56,7 @@ icalendar:
 This will colour the event "Recycling" as green, "Food waste" as brown and the calendar itself (usually this is used as the default event colour) as black.
 
 ## Known issues
-None.
+- Line length is not restricted to 75 characters
 
 ## Future enhancements
 Your support is welcomed.
