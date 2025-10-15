@@ -65,10 +65,13 @@ class iCalendarView(HomeAssistantView):
         #   - entity_id: calendar.entity
         #     secret: secretpassword
         valid_calendar = False
+        calendar_colour = None
         for cal in self.calendars:
             if (("entity_id" in cal) and (cal['entity_id'] == entity_id)) and ("secret" in cal):
                 valid_calendar = True
                 secret = cal['secret']
+                if("colour" in cal):
+                    calendar_colour = cal['colour']
                 break
         
         if valid_calendar is not True:
@@ -120,6 +123,8 @@ class iCalendarView(HomeAssistantView):
         response += "METHOD:PUBLISH\n"
         response += f"ORGANIZER;CN=\"{escape(self._state.attributes['friendly_name'])}\":MAILTO:{entity_id}@homeassistant.local\n"
         response += f"NAME:{escape(self._state.attributes['friendly_name'])}\n"
+        if calendar_colour is not None:
+            response += f"COLOR:{calendar_colour}\n"
 
         # Generate the variables
         entity_id = escape(entity_id)

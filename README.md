@@ -36,19 +36,24 @@ In your preferred calendar application, input your iCalendar URL in the followin
 
 ## Additional configuration
 
-You can add colours to specific named events by adding the colours section to your config.  Colours are specified as [named CSS3 colours](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color).  For example, to colour events for your bin calendar, you might use:
+You can add colours to both calendars and specific named events by adding them to your config.
+Colours are specified as [named CSS3 colours](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color).
+For example, to colour events for your bin calendar, you might use:
 
 ```
 icalendar:
   calendars:
     - entity_id: calendar.bins
       secret: yourSuperSecret
+      colour: black
   colours:
     - name: "Recycling"
       colour: green
     - name: "Food waste"
       colour: brown
 ```
+
+This will colour the event "Recycling" as green, "Food waste" as brown and the calendar itself (usually this is used as the default event colour) as black.
 
 ## Known issues
 None.
