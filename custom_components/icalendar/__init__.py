@@ -134,10 +134,10 @@ class iCalendarView(HomeAssistantView):
             try:
                 start = datetime.datetime.strptime(
                     e["start"], "%Y-%m-%dT%H:%M:%S%z"
-                ).strftime("%Y%m%dT%H%M%S")
+                ).strftime("%Y%m%dT%H%M%SZ")
                 end = datetime.datetime.strptime(
                     e["end"], "%Y-%m-%dT%H:%M:%S%z"
-                ).strftime("%Y%m%dT%H%M%S")
+                ).strftime("%Y%m%dT%H%M%SZ")
                 dtstamp = start
             except:
                 start = datetime.datetime.strptime(
