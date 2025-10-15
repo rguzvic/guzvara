@@ -23,17 +23,18 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the iCalendar component."""
     colours = None
+    calendars = None
 
     for name, value in config[DOMAIN].items():
         if name == "colours":
             colours = value
         # Find the secret from the config file
-        if name == "secret":
-            secret = str(value)
+        if name == "calendars":
+            calendars = value
 
     # Register the iCalendar HTTP view
-    if secret is not None:
-        hass.http.register_view(iCalendarView(hass, secret, colours))
+    if calendars is not None:
+        hass.http.register_view(iCalendarView(hass, calendars, colours))
         return True
 
     return False
@@ -45,10 +46,10 @@ class iCalendarView(HomeAssistantView):
     name = f"{DOMAIN}"
     url = "/api/ics/{entity_id}"
 
-    def __init__(self, hass: HomeAssistant, secret: str, colours: Optional[dict]) -> None:
+    def __init__(self, hass: HomeAssistant, calendars: dict, colours: Optional[dict]) -> None:
         """Initialize the iCalendar view."""
         self.hass = hass
-        self.secret = secret
+        self.calendars = calendars
         self.colours = colours
         self.requires_auth = False
 
@@ -59,8 +60,23 @@ class iCalendarView(HomeAssistantView):
             _LOGGER.error("Request was sent for entity '%s' without secret", entity_id)
             return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
 
+        # Find the calendar in config. Should be defined as per below or it will get denied.
+        # calendars:
+        #   - entity_id: calendar.entity
+        #     secret: secretpassword
+        valid_calendar = False
+        for cal in self.calendars:
+            if (("entity_id" in cal) and (cal['entity_id'] == entity_id)) and ("secret" in cal):
+                valid_calendar = True
+                secret = cal['secret']
+                break
+        
+        if valid_calendar is not True:
+            _LOGGER.error("Request was sent for entity '%s' which is not allowed by config", entity_id)
+            return web.Response(body="403: Forbidden", status=HTTPStatus.FORBIDDEN)
+
         # Only return anything with the secret supplied
-        if str(request.query.get("s")) != str(self.secret):
+        if str(request.query.get("s")) != str(secret):
             _LOGGER.error(
                 "Request was sent for entity '%s' with invalid secret", entity_id
             )
@@ -161,8 +177,12 @@ class iCalendarView(HomeAssistantView):
             ):
                 response += f"LOCATION:{escape(e['location']).replace('\n', '\n ').rstrip()}\n"
 
+            # Set colour for event, defined in config as per below:
+            # colours:
+            #   - name: "Calendar Event Summary"
+            #     colour: css3 colour name
             for c in self.colours:
-                if c['name'] == summary:
+                if ("name" in c) and (c['name'] == summary):
                     response += f"COLOR:{c['colour']}\n"
 
             # Finish up this calendar entry

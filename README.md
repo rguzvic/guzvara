@@ -10,9 +10,14 @@ Generates an iCalendar (.ics) link that you can use to view your Home Assistant 
 
    ```
    icalendar:
-     secret: yourSuperSecret
+     calendars:
+       - entity_id: calendar.entity_id
+         secret: yourSuperSecret
    ```
-4. Restart Home Assistant
+
+There should be a "calendars" entry for all calendars that need remote access.
+
+5. Restart Home Assistant
 
 ### Manually
 Copy all files in the *custom_components/icalendar* folder to your Home Assistant folder *config/custom_components/icalendar*.
@@ -31,16 +36,18 @@ In your preferred calendar application, input your iCalendar URL in the followin
 
 ## Additional configuration
 
-You can add colours to specific named events by adding the colours section to your config.  For example:
+You can add colours to specific named events by adding the colours section to your config.  Colours are specified as [named CSS3 colours](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color).  For example, to colour events for your bin calendar, you might use:
 
 ```
 icalendar:
-  secret: yourSuperSecret
+  calendars:
+    - entity_id: calendar.bins
+      secret: yourSuperSecret
   colours:
     - name: "Recycling"
       colour: green
-    - name: "Important Event"
-      colour: red
+    - name: "Food waste"
+      colour: brown
 ```
 
 ## Known issues
