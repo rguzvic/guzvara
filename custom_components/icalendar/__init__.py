@@ -7,7 +7,7 @@ from html import escape
 from http import HTTPStatus
 
 from aiohttp import web
-import datetime
+from datetime import datetime, timezone, timedelta
 import hashlib
 
 from homeassistant.components.http import HomeAssistantView
@@ -100,8 +100,8 @@ class iCalendarView(HomeAssistantView):
 
         # Calculate the start and end timeframe for our calendar
         # We output 4 weeks history and 52 weeks into the future
-        start = (datetime.datetime.now() - datetime.timedelta(weeks=4)).strftime("%Y-%m-%d %H:%M:%S")
-        end = (datetime.datetime.now() + datetime.timedelta(weeks=52)).strftime("%Y-%m-%d %H:%M:%S")
+        start = (datetime.now() - timedelta(weeks=4)).strftime("%Y-%m-%d %H:%M:%S")
+        end = (datetime.now() + timedelta(weeks=52)).strftime("%Y-%m-%d %H:%M:%S")
 
         events = await self.hass.services.async_call('calendar', 'get_events',
               { "entity_id": entity_id,
@@ -132,18 +132,14 @@ class iCalendarView(HomeAssistantView):
         # Iterate through all the events
         for e in events:
             try:
-                start = datetime.datetime.strptime(
-                    e["start"], "%Y-%m-%dT%H:%M:%S%z"
-                ).strftime("%Y%m%dT%H%M%SZ")
-                end = datetime.datetime.strptime(
-                    e["end"], "%Y-%m-%dT%H:%M:%S%z"
-                ).strftime("%Y%m%dT%H%M%SZ")
+                start = datetime.fromisoformat(e["start"]).astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                end = datetime.fromisoformat(e["end"]).astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                 dtstamp = start
             except:
-                start = datetime.datetime.strptime(
+                start = datetime.strptime(
                     e["start"], "%Y-%m-%d"
                 ).strftime("%Y%m%d")
-                end = datetime.datetime.strptime(
+                end = datetime.strptime(
                     e["end"], "%Y-%m-%d"
                 ).strftime("%Y%m%d")
                 dtstamp = f'{start}T000000'
