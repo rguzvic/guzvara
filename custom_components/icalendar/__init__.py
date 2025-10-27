@@ -129,13 +129,13 @@ class iCalendarView(HomeAssistantView):
 
         # Generate the variables
         entity_id = escape(entity_id)
+        dtstamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
         # Iterate through all the events
         for e in events:
             try:
                 start = datetime.fromisoformat(e["start"]).astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                 end = datetime.fromisoformat(e["end"]).astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-                dtstamp = start
             except:
                 start = datetime.strptime(
                     e["start"], "%Y-%m-%d"
@@ -143,8 +143,7 @@ class iCalendarView(HomeAssistantView):
                 end = datetime.strptime(
                     e["end"], "%Y-%m-%d"
                 ).strftime("%Y%m%d")
-                dtstamp = f'{start}T000000'
-                
+
             # Create and hash the UID
             if ("summary" in e and e["summary"] is not None):
                 summary = escape(e['summary'])
