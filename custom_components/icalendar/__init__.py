@@ -123,6 +123,7 @@ class iCalendarView(HomeAssistantView):
         response += "METHOD:PUBLISH\n"
         response += f"ORGANIZER;CN=\"{escape(self._state.attributes['friendly_name'])}\":MAILTO:{entity_id}@homeassistant.local\n"
         response += f"NAME:{escape(self._state.attributes['friendly_name'])}\n"
+        response += f"X-WR-CALNAME:{escape(self._state.attributes['friendly_name'])}\n"
         if calendar_colour is not None:
             response += f"COLOR:{calendar_colour}\n"
 
